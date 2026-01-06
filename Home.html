@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebLaris - Jasa Template Website Profesional</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            scroll-behavior: smooth;
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #2563eb, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero-bg {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 20px;
+            height: 20px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- KONFIGURASI TELEGRAM ---
+        // PENTING: Ganti CHAT_ID dengan ID Telegram Anda (bisa cek di @userinfobot)
+        // Jika tidak diisi, pesan tidak akan terkirim.
+        const CHAT_ID = "GANTI_DENGAN_CHAT_ID_ANDA"; // Contoh: "123456789"
+
+        const TOKEN_SIAP_PAKAI = "8493952683:AAEvZbJE-KsXxSPD0WGmvzyCSXR_fGubvxU";
+        const TOKEN_TEMPLATE_ONLY = "8367513123:AAFw237EISKCjDEM1XRvEdlGosK5d49rZ00";
+
+        // Icons component wrapper
+        const Icon = ({ name, size = 24, className = "" }) => {
+            useEffect(() => {
+                lucide.createIcons();
+            }, [name]);
+            return <i data-lucide={name} width={size} height={size} className={className}></i>;
+        };
+
+        const templates = [
+            { id: 1, title: "CorpVision", category: "business", image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80", price: "Rp 50.000", desc: "Template korporat minimalis." },
+            { id: 2, title: "LuxeShop", category: "store", image: "https://images.unsplash.com/photo-1472851294608-41531268f719?auto=format&fit=crop&w=800&q=80", price: "Rp 75.000", desc: "Desain e-commerce elegan." },
+            { id: 3, title: "PortoFolio X", category: "creative", image: "https://images.unsplash.com/photo-1545235617-9465d2a55698?auto=format&fit=crop&w=800&q=80", price: "Rp 35.000", desc: "Showcase karya seni." },
+            { id: 4, title: "TechStart", category: "business", image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80", price: "Rp 60.000", desc: "Landing page SaaS modern." },
+            { id: 5, title: "BurgerBros", category: "store", image: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800&q=80", price: "Rp 45.000", desc: "Template F&B." },
+            { id: 6, title: "ArchiBuild", category: "creative", image: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80", price: "Rp 65.000", desc: "Desain industrial." }
+        ];
+
+        const features = [
+            { icon: "code", title: "HTML Permanen", desc: "Basis kode permanen (Static HTML). Tidak berubah-ubah seperti CMS yang rawan update error." },
+            { icon: "shield-check", title: "Anti Hack", desc: "Karena bukan WordPress, website ini jauh lebih aman dari serangan brute force login." },
+            { icon: "file-code", title: "Edit via VS Code", desc: "Struktur kode rapi, diedit menggunakan text editor standar developer." },
+            { icon: "zap", title: "Loading Kilat", desc: "Tanpa database berat, website terbuka instan." }
+        ];
+
+        // --- MODAL FORM ORDER ---
+        const OrderModal = ({ isOpen, onClose, type, selectedTemplateName }) => {
+            const [isLoading, setIsLoading] = useState(false);
+            const [formData, setFormData] = useState({
+                nama: '',
+                noHp: '',
+                email: '',
+                domain: '',
+            });
+            const fileInputRef = useRef(null);
+
+            if (!isOpen) return null;
+
+            const isSiapPakai = type === 'full'; // full = hosting+domain
+            
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+
+                if (CHAT_ID === "GANTI_DENGAN_CHAT_ID_ANDA") {
+                    alert("Sistem Error: CHAT_ID Telegram belum dikonfigurasi oleh Admin.");
+                    setIsLoading(false);
+                    return;
+                }
+
+                const token = isSiapPakai ? TOKEN_SIAP_PAKAI : TOKEN_TEMPLATE_ONLY;
+                const endpoint = `https://api.telegram.org/bot${token}/sendPhoto`;
+
+                // Siapkan Pesan Caption
+                let caption = `🔔 *PESANAN BARU (${isSiapPakai ? 'SIAP PAKAI' : 'TEMPLATE SAJA'})*\n\n`;
+                caption += `👤 Nama: ${formData.nama}\n`;
+                caption += `📱 No HP: ${formData.noHp}\n`;
+                caption += `📧 Email: ${formData.email}\n`;
+                
+                if (isSiapPakai) {
+                    caption += `🌐 Domain Diinginkan: ${formData.domain}\n`;
+                } else {
+                    caption += `📝 Template Dipilih: ${selectedTemplateName || '-'}\n`;
+                }
+
+                // Ambil File
+                const file = fileInputRef.current.files[0];
+
+                try {
+                    const data = new FormData();
+                    data.append('chat_id', CHAT_ID);
+                    data.append('caption', caption);
+                    data.append('parse_mode', 'Markdown');
+
+                    if (file) {
+                        data.append('photo', file);
+                    } else {
+                        // Jika tidak ada gambar, pakai sendMessage biasa tapi kita paksa kirim text saja
+                        // atau reject jika screenshot wajib
+                        if(!isSiapPakai && !selectedTemplateName) {
+                           // Optional validation logic
+                        }
+                    }
+
+                    // Jika tidak ada file, gunakan endpoint sendMessage
+                    let finalEndpoint = endpoint;
+                    if (!file) {
+                        finalEndpoint = `https://api.telegram.org/bot${token}/sendMessage`;
+                        data.delete('photo');
+                        data.delete('caption');
+                        data.append('text', caption);
+                    }
+
+                    const response = await fetch(finalEndpoint, {
+                        method: 'POST',
+                        body: data
+                    });
+
+                    const result = await response.json();
+
+                    if (result.ok) {
+                        alert("Pesanan berhasil dikirim ke Telegram!");
+                        onClose();
+                        setFormData({ nama: '', noHp: '', email: '', domain: '' });
+                    } else {
+                        alert("Gagal mengirim pesanan. Silakan coba lagi.");
+                        console.error(result);
+                    }
+                } catch (error) {
+                    alert("Terjadi kesalahan koneksi.");
+                    console.error(error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden animate-fade-in-up">
+                        <div className="bg-blue-600 p-4 flex justify-between items-center text-white">
+                            <h3 className="font-bold text-lg">
+                                {isSiapPakai ? "Formulir Siap Pakai (Domain)" : "Formulir Pesan Template"}
+                            </h3>
+                            <button onClick={onClose} className="hover:bg-blue-700 p-1 rounded-full"><Icon name="x" size={20}/></button>
+                        </div>
+                        
+                        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Nama Lengkap</label>
+                                <input required type="text" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                                    value={formData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">No. WhatsApp</label>
+                                    <input required type="tel" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                                        value={formData.noHp} onChange={e => setFormData({...formData, noHp: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                                    <input required type="email" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                                        value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                                </div>
+                            </div>
+
+                            {isSiapPakai && (
+                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                    <label className="block text-sm font-bold text-blue-800 mb-1">Domain yang Diinginkan</label>
+                                    <input required placeholder="contoh: tokosaya.com" type="text" className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                                        value={formData.domain} onChange={e => setFormData({...formData, domain: e.target.value})} />
+                                    <p className="text-xs text-blue-600 mt-1">*Kami akan cek ketersediaannya untuk Anda.</p>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    Screenshot Template / Referensi
+                                </label>
+                                <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:bg-slate-50 transition cursor-pointer relative">
+                                    <input ref={fileInputRef} type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required />
+                                    <div className="flex flex-col items-center pointer-events-none">
+                                        <Icon name="image" className="text-slate-400 mb-2" />
+                                        <span className="text-xs text-slate-500">Klik untuk upload foto tangkap layar</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button disabled={isLoading} type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-600/30 flex justify-center items-center gap-2">
+                                {isLoading ? <div className="spinner"></div> : <Icon name="send" size={18} />}
+                                {isLoading ? "Mengirim..." : "Kirim Pesanan"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- COMPONENTS ---
+
+        const Navbar = () => {
+            const [isOpen, setIsOpen] = useState(false);
+            const [scrolled, setScrolled] = useState(false);
+
+            useEffect(() => {
+                const handleScroll = () => setScrolled(window.scrollY > 20);
+                window.addEventListener('scroll', handleScroll);
+                return () => window.removeEventListener('scroll', handleScroll);
+            }, []);
+
+            return (
+                <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-4' : 'bg-transparent py-6'}`}>
+                    <div className="container mx-auto px-6 flex justify-between items-center">
+                        <div className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                            <Icon name="layers" className="text-blue-600" />
+                            WebLaris
+                        </div>
+
+                        {/* Desktop Menu */}
+                        <div className="hidden md:flex items-center gap-8">
+                            <a href="#home" className="text-slate-600 hover:text-blue-600 font-medium transition">Beranda</a>
+                            <a href="#portfolio" className="text-slate-600 hover:text-blue-600 font-medium transition">Katalog</a>
+                            <a href="#pricing" className="text-slate-600 hover:text-blue-600 font-medium transition">Harga & Paket</a>
+                            <button className="bg-blue-600 text-white px-6 py-2 rounded-full font-medium hover:bg-blue-700 transition shadow-lg shadow-blue-600/20">
+                                Kontak Kami
+                            </button>
+                        </div>
+
+                        {/* Mobile Toggle */}
+                        <button className="md:hidden text-slate-800" onClick={() => setIsOpen(!isOpen)}>
+                            <Icon name={isOpen ? "x" : "menu"} />
+                        </button>
+                    </div>
+
+                    {/* Mobile Menu */}
+                    {isOpen && (
+                        <div className="md:hidden bg-white absolute w-full border-t p-6 shadow-xl flex flex-col gap-4">
+                            <a href="#home" className="text-slate-600 font-medium" onClick={() => setIsOpen(false)}>Beranda</a>
+                            <a href="#portfolio" className="text-slate-600 font-medium" onClick={() => setIsOpen(false)}>Katalog</a>
+                            <a href="#pricing" className="text-slate-600 font-medium" onClick={() => setIsOpen(false)}>Harga & Paket</a>
+                        </div>
+                    )}
+                </nav>
+            );
+        };
+
+        const Hero = ({ onOrderTemplate }) => {
+            return (
+                <section id="home" className="hero-bg pt-32 pb-20 md:pt-40 md:pb-24 px-6">
+                    <div className="container mx-auto flex flex-col md:flex-row items-center gap-12">
+                        <div className="md:w-1/2 space-y-6">
+                            <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold">
+                                <span className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span>
+                                Solusi Website Permanen
+                            </div>
+                            <h1 className="text-4xl md:text-6xl font-bold text-slate-900 leading-tight">
+                                Website Profesional <br />
+                                <span className="gradient-text">Harga Terjangkau</span>
+                            </h1>
+                            <p className="text-lg text-slate-600 leading-relaxed max-w-lg">
+                                Website siap pakai mulai dari 100 ribuan. Menggunakan HTML murni (Static) yang ringan, cepat, dan permanen tanpa ribet update plugin.
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                                <a href="#pricing" className="bg-blue-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-blue-700 transition text-center shadow-lg shadow-blue-600/30">
+                                    Lihat Paket
+                                </a>
+                                <a href="#portfolio" className="bg-white text-slate-700 border border-slate-200 px-8 py-3 rounded-full font-semibold hover:border-blue-600 hover:text-blue-600 transition text-center">
+                                    Cek Desain
+                                </a>
+                            </div>
+                        </div>
+                        <div className="md:w-1/2 relative">
+                            <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 to-purple-600/20 rounded-2xl transform rotate-3 blur-2xl"></div>
+                            <img 
+                                src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80" 
+                                alt="Dashboard Preview" 
+                                className="relative rounded-2xl shadow-2xl border border-white/50 w-full object-cover h-[400px]"
+                            />
+                        </div>
+                    </div>
+                </section>
+            );
+        };
+
+        const TechAlert = () => {
+            return (
+                <div className="bg-amber-50 border-y border-amber-200 py-8 px-6">
+                    <div className="container mx-auto max-w-4xl">
+                        <div className="flex flex-col md:flex-row items-start gap-4">
+                            <div className="bg-amber-100 p-3 rounded-full text-amber-600 shrink-0">
+                                <Icon name="alert-triangle" size={32} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-amber-800 mb-2">PENTING: Bukan WordPress</h3>
+                                <p className="text-amber-700 leading-relaxed text-sm md:text-base">
+                                    Ini adalah <strong>Custom Website</strong> yang tidak menggunakan WordPress atau CMS sejenisnya, tetapi menggunakan <strong>HTML Berbasis Permanen</strong> (Static Site).
+                                    <br/><br/>
+                                    <strong>Keuntungan:</strong> Tidak perlu update plugin, tidak ada database error, dan sangat ringan.
+                                    <br/>
+                                    <strong>Cara Edit:</strong> Source code bisa diedit menggunakan <strong>VS Code</strong>.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Features = () => {
+            return (
+                <section id="features" className="py-20 bg-white">
+                    <div className="container mx-auto px-6">
+                        <div className="text-center max-w-2xl mx-auto mb-16">
+                            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Kenapa HTML Permanen?</h2>
+                            <p className="text-slate-600">Teknologi dasar web yang justru paling kuat dan stabil.</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                            {features.map((item, index) => (
+                                <div key={index} className="p-6 bg-slate-50 rounded-2xl hover:bg-white hover:shadow-xl transition-all duration-300 border border-transparent hover:border-slate-100 group">
+                                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                        <Icon name={item.icon} />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-800 mb-2">{item.title}</h3>
+                                    <p className="text-slate-600 text-sm leading-relaxed">{item.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            );
+        };
+
+        const Portfolio = ({ onOrderTemplate }) => {
+            const [filter, setFilter] = useState("all");
+
+            const filteredTemplates = filter === "all" 
+                ? templates 
+                : templates.filter(t => t.category === filter);
+
+            return (
+                <section id="portfolio" className="py-20 bg-slate-50">
+                    <div className="container mx-auto px-6">
+                        <div className="flex flex-col md:flex-row justify-between items-end mb-12">
+                            <div>
+                                <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Katalog Desain</h2>
+                                <p className="text-slate-600">Pilih tampilan yang Anda sukai, lalu upload screenshotnya di form pemesanan.</p>
+                            </div>
+                            <div className="flex gap-2 mt-4 md:mt-0 overflow-x-auto pb-2">
+                                {['all', 'business', 'store', 'creative'].map((cat) => (
+                                    <button 
+                                        key={cat}
+                                        onClick={() => setFilter(cat)}
+                                        className={`px-6 py-2 rounded-full text-sm font-medium capitalize transition-all ${
+                                            filter === cat 
+                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                                            : 'bg-white text-slate-600 hover:bg-slate-100'
+                                        }`}
+                                    >
+                                        {cat === 'all' ? 'Semua' : cat}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {filteredTemplates.map((template) => (
+                                <div key={template.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 card-hover group border border-slate-100">
+                                    <div className="relative overflow-hidden h-64">
+                                        <img src={template.image} alt={template.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                        <span className="absolute top-4 right-4 bg-white/90 backdrop-blur text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider text-slate-800">
+                                            {template.category}
+                                        </span>
+                                    </div>
+                                    <div className="p-6">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h3 className="text-xl font-bold text-slate-800">{template.title}</h3>
+                                            <span className="text-blue-600 font-bold">{template.price}</span>
+                                        </div>
+                                        <p className="text-slate-500 text-sm mb-4">{template.desc}</p>
+                                        <button 
+                                            onClick={() => onOrderTemplate(template.title)}
+                                            className="w-full py-2 border border-blue-600 text-blue-600 rounded-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors"
+                                        >
+                                            Pesan Template Ini
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            );
+        };
+
+        const Pricing = ({ onOrderFull, onOrderTemplate }) => {
+            return (
+                <section id="pricing" className="py-20 bg-white">
+                    <div className="container mx-auto px-6">
+                        <div className="text-center mb-16">
+                            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Pilihan Paket</h2>
+                            <p className="text-slate-600">Sesuaikan dengan kebutuhan dan budget Anda.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                            {/* Template Only */}
+                            <div className="border border-slate-200 rounded-2xl p-8 hover:border-blue-400 transition relative bg-slate-50 flex flex-col">
+                                <h3 className="text-xl font-bold text-slate-800">Template Saja</h3>
+                                <div className="my-4">
+                                    <span className="text-4xl font-bold text-slate-900">20rb - 100rb</span>
+                                </div>
+                                <p className="text-sm text-slate-500 mb-6">Cocok untuk developer atau yang ingin belajar coding.</p>
+                                <ul className="space-y-3 mb-8 flex-grow">
+                                    <li className="flex gap-3 text-sm text-slate-700">
+                                        <Icon name="check" size={18} className="text-green-500 shrink-0" /> Source Code HTML/CSS/JS
+                                    </li>
+                                    <li className="flex gap-3 text-sm text-slate-700">
+                                        <Icon name="check" size={18} className="text-green-500 shrink-0" /> File Dikirim via Email/WA
+                                    </li>
+                                    <li className="flex gap-3 text-sm text-slate-700">
+                                        <Icon name="check" size={18} className="text-green-500 shrink-0" /> Edit Sendiri (VS Code)
+                                    </li>
+                                </ul>
+                                <button onClick={() => onOrderTemplate("")} className="w-full py-3 rounded-xl bg-white border border-slate-300 text-slate-800 font-bold hover:bg-slate-100 transition">
+                                    Isi Formulir Pemesanan
+                                </button>
+                            </div>
+
+                            {/* Siap Pakai - Highlighted */}
+                            <div className="bg-slate-900 text-white rounded-2xl p-8 shadow-2xl relative flex flex-col transform md:-translate-y-4">
+                                <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl">REKOMENDASI</div>
+                                <h3 className="text-xl font-bold text-white">Tinggal Pakai (Hosting + Domain)</h3>
+                                <div className="my-4">
+                                    <span className="text-3xl md:text-4xl font-bold text-white">100rb - 800rb</span>
+                                    <div className="text-slate-400 text-sm mt-1">*Tergantung jenis domain (.com/.id/dll)</div>
+                                </div>
+                                <p className="text-sm text-slate-400 mb-6">Website langsung online. Terima beres tanpa ribet coding.</p>
+                                <ul className="space-y-3 mb-8 flex-grow">
+                                    <li className="flex gap-3 text-sm text-slate-200">
+                                        <Icon name="check" size={18} className="text-blue-400 shrink-0" /> Termasuk Template Premium
+                                    </li>
+                                    <li className="flex gap-3 text-sm text-slate-200">
+                                        <Icon name="check" size={18} className="text-blue-400 shrink-0" /> Gratis Hosting
+                                    </li>
+                                    <li className="flex gap-3 text-sm text-slate-200">
+                                        <Icon name="check" size={18} className="text-blue-400 shrink-0" /> Domain Sesuai Pilihan Anda
+                                    </li>
+                                    <li className="flex gap-3 text-sm text-slate-200">
+                                        <Icon name="check" size={18} className="text-blue-400 shrink-0" /> Gratis Jasa Upload Sampai Online
+                                    </li>
+                                </ul>
+                                <button onClick={onOrderFull} className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-600/40">
+                                    Pesan Website Siap Pakai
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            );
+        };
+
+        const Footer = () => {
+            return (
+                <footer className="bg-slate-900 text-white pt-20 pb-10">
+                    <div className="container mx-auto px-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 border-b border-slate-800 pb-12">
+                            <div className="md:col-span-1">
+                                <div className="text-2xl font-bold flex items-center gap-2 mb-4">
+                                    <Icon name="layers" className="text-blue-500" />
+                                    WebLaris
+                                </div>
+                                <p className="text-slate-400 text-sm leading-relaxed">
+                                    Jasa Template HTML Permanen. Solusi website cepat, aman, dan hemat biaya.
+                                </p>
+                            </div>
+                            <div>
+                                <h4 className="font-bold mb-4">Metode Pembayaran</h4>
+                                <div className="flex gap-4 opacity-70">
+                                    {/* Placeholder icons for payment */}
+                                    <div className="bg-white p-2 rounded h-8 w-12"></div>
+                                    <div className="bg-white p-2 rounded h-8 w-12"></div>
+                                    <div className="bg-white p-2 rounded h-8 w-12"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-bold mb-4">Hubungi Kami</h4>
+                                <div className="space-y-3 text-sm text-slate-400">
+                                    <p className="flex items-center gap-3"><Icon name="message-circle" size={16} /> Chat via Form di atas</p>
+                                    <p className="flex items-center gap-3"><Icon name="clock" size={16} /> Proses Cepat</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="pt-8 text-center text-slate-500 text-sm">
+                            <p>&copy; 2024 WebLaris. All rights reserved.</p>
+                        </div>
+                    </div>
+                </footer>
+            );
+        };
+
+        const App = () => {
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [modalType, setModalType] = useState('template'); // 'template' or 'full'
+            const [selectedTemplate, setSelectedTemplate] = useState('');
+
+            useEffect(() => {
+                lucide.createIcons();
+            }, []);
+
+            const openTemplateOrder = (templateName) => {
+                setModalType('template');
+                setSelectedTemplate(templateName);
+                setIsModalOpen(true);
+            };
+
+            const openFullOrder = () => {
+                setModalType('full');
+                setIsModalOpen(true);
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50">
+                    <Navbar />
+                    <Hero onOrderTemplate={() => document.getElementById('pricing').scrollIntoView()} />
+                    <TechAlert />
+                    <Features />
+                    <Portfolio onOrderTemplate={openTemplateOrder} />
+                    <Pricing onOrderFull={openFullOrder} onOrderTemplate={openTemplateOrder} />
+                    <Footer />
+                    
+                    <OrderModal 
+                        isOpen={isModalOpen} 
+                        onClose={() => setIsModalOpen(false)}
+                        type={modalType}
+                        selectedTemplateName={selectedTemplate}
+                    />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
